@@ -1,0 +1,14 @@
+Loading datasets...
+Hardening Architectures...
+Baseline RF Accuracy: 95.71%
+Baseline LR Accuracy: 91.15%
+Running Adversarial Stress Test across architectures...
+Epsilon 0.00 | RF Acc: 95.7% | LR Acc: 91.1%
+Epsilon 0.05 | RF Acc: 74.0% | LR Acc: 90.5%
+Epsilon 0.10 | RF Acc: 67.5% | LR Acc: 87.6%
+Epsilon 0.15 | RF Acc: 62.6% | LR Acc: 80.5%
+Epsilon 0.20 | RF Acc: 59.5% | LR Acc: 68.3%
+Epsilon 0.25 | RF Acc: 55.6% | LR Acc: 58.6%
+Epsilon 0.30 | RF Acc: 52.5% | LR Acc: 50.5%
+Epsilon 0.40 | RF Acc: 47.2% | LR Acc: 35.4%
+Epsilon 0.50 | RF Acc: 40.4% | LR Acc: 25.0%
