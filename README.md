@@ -1,107 +1,59 @@
-# 🛡️ Problem 106 — The Adversarial Stress-Tester
+# Adversarial Stress Test: Random Forest vs Logistic Regression
 
-## Project Structure
+This project compares how two MNIST digit classifiers respond to increasing
+random signed pixel noise. It measures noise robustness, not worst-case
+adversarial robustness. Neither FGSM nor adversarial training is used.
 
-```
-adversarial_stress_tester.py   ← Main script (sklearn, no GPU needed)
-bonus_fgsm_pytorch.py          ← Bonus: True FGSM with PyTorch CNN
-README.md                      ← This file
-```
+## Original experiment
 
----
+[`notebooks/MLjack.ipynb`](notebooks/MLjack.ipynb) is a byte-for-byte copy of the
+user-supplied `MLjack (2).ipynb`, including its original code and saved outputs.
+It is the source experiment for this repository. The unrelated SVM and CNN
+scripts from the earlier repository version have been removed; Git history
+preserves them.
 
-## ⚙️ Setup
+The notebook reads `mnist_train.csv` and `mnist_test.csv`, expects a label in the
+first column and 784 pixel columns, divides pixels by 255, and replaces missing
+pixel values with zero. It trains a 100-tree Random Forest and Logistic
+Regression with `solver='liblinear'` and `max_iter=100`.
 
-```bash
-# Core requirements (main script)
-pip install scikit-learn numpy matplotlib openml tqdm
+Both models see the same noisy test images at each epsilon. Noise is generated
+as `epsilon * sign(normal(0, 1))`, added to pixels, and clipped to `[0, 1]`.
+The notebook does not seed that noise generator.
 
-# Bonus script (true FGSM)
-pip install torch torchvision
-```
+## Saved notebook results
 
----
+These are historical outputs embedded in the supplied notebook, not newly
+reproduced benchmarks. The original CSVs and environment versions were not
+included, so exact reproduction has not been verified.
 
-## 🚀 Running
+| Epsilon | Random Forest accuracy | Logistic Regression accuracy |
+| ---: | ---: | ---: |
+| 0.00 | 95.7% | 91.1% |
+| 0.05 | 74.0% | 90.5% |
+| 0.10 | 67.5% | 87.6% |
+| 0.15 | 62.6% | 80.5% |
+| 0.20 | 59.5% | 68.3% |
+| 0.25 | 55.6% | 58.6% |
+| 0.30 | 52.5% | 50.5% |
+| 0.40 | 47.2% | 35.4% |
+| 0.50 | 40.4% | 25.0% |
 
-```bash
-# Main pipeline (RBF-SVM, ~3-5 min on CPU)
-python adversarial_stress_tester.py
+Separately printed clean accuracies are RF **95.71%** and LR **91.15%**.
+RF leads on clean data; LR leads at the sampled noise levels from 0.05 through
+0.25; RF leads again from 0.30 through 0.50. The later crossover is bracketed
+between 0.25 and 0.30, not precisely measured at 0.28.
 
-# Bonus: PyTorch CNN with real gradient-based attack
-python bonus_fgsm_pytorch.py
-```
+## Reading the notebook accurately
 
-Switch between RBF-SVM and Random Forest by changing:
-```python
-USE_MODEL = "svm"   # or "rf"
-```
-
----
-
-## 📦 What Each Script Does
-
-### `adversarial_stress_tester.py`
-| Step | What happens |
-|------|-------------|
-| **1. Data** | Loads MNIST-784 from OpenML (10k train, 2k test) |
-| **2. Model Hardening** | Trains RBF-SVM (C=10, γ=scale) inside a StandardScaler pipeline |
-| **3. Perturbation Engine** | Adds ε × sign(random noise) to each pixel — FGSM-style without gradients |
-| **4. Fragility Curve** | Sweeps ε ∈ [0, 0.5], plots Accuracy vs ε, marks Breaking Point |
-| **5. Visual Audit** | Picks tricked samples, shows Clean vs Adversarial side-by-side |
-
-### `bonus_fgsm_pytorch.py`
-- Trains a 2-layer CNN (32→64 conv + 2 FC layers)
-- Applies **true FGSM** using `loss.backward()` gradients
-- Produces its own fragility curve and visual audit
-
----
-
-## 💡 Ideas to Make This Project Better (Grade Boosters)
-
-### 🔴 Advanced Attacks (High Impact)
-1. **PGD (Projected Gradient Descent)** — Multi-step FGSM, far more powerful. The gold standard for adversarial evaluation.
-2. **C&W Attack (Carlini & Wagner)** — Optimisation-based attack, finds minimal perturbations.
-3. **Boundary Attack** — Decision-based (black-box), no gradients needed, works on sklearn models natively!
-4. **Square Attack** — State-of-the-art black-box attack using random square-shaped updates.
-
-### 🟡 Defenses (Distinguish your project)
-5. **Adversarial Training** — Fine-tune model on generated adversarial examples. Check if it hardens the fragility curve.
-6. **Feature Squeezing** — Apply image smoothing (median filter, bit-depth reduction) before inference to destroy perturbations.
-7. **Gaussian Input Smoothing** — Certifiable defense via randomized smoothing (Cohen et al. 2019).
-8. **Input Preprocessing Pipeline** — Compare: no defense vs. feature squeezing vs. adversarial training on the *same* fragility curve.
-
-### 🟢 Analysis & Visualisation
-9. **Perturbation Heatmap** — Show which pixels are most attacked (average |Δ| across samples). Great visual!
-10. **Decision Boundary Visualization** — Use UMAP/t-SNE to show how adversarial samples cross boundaries.
-11. **Per-class Breaking Point** — Does the model break faster on '8' vs '1'? Plot a fragility curve per digit class.
-12. **Confidence vs. Epsilon** — If using SVM with `probability=True` or a CNN: show how model confidence collapses as ε grows.
-13. **Transferability Test** — Attack trained on RF → test on SVM. Does the adversarial example transfer? (Spoiler: often yes!)
-
-### 🔵 Engineering & Extras
-14. **Interactive Epsilon Slider** — Use `matplotlib.widgets.Slider` or Gradio to let users drag ε and watch the image change live.
-15. **Robustness Score Card** — Print a formatted table: model name, clean acc, breaking_eps, acc@ε=0.3, etc.
-16. **Adversarial Dataset Export** — Save the adversarial examples as a new dataset (`.npy` files) for reuse.
-17. **Streamlit Dashboard** — Wrap everything in a Streamlit app for a clickable demo.
-
----
-
-## 📖 Key Concepts to Mention in Report
-
-- **Adversarial robustness ≠ accuracy**: A 99% accurate model can still be completely fragile.
-- **High-dimensional geometry**: In 784-dimensional pixel space, tiny moves in the "wrong direction" can jump across decision boundaries.
-- **ε-ball**: All adversarial perturbations must stay within an ℓ∞ ball of radius ε around the original.
-- **Black-box vs. White-box**: sklearn models = black-box (no gradients). PyTorch CNN = white-box (full FGSM).
-- **Transferability**: Adversarial examples crafted for one model often fool a different model too.
-
----
-
-## 📊 Expected Results
-
-| Model | Clean Acc | Breaking Point (ε) |
-|-------|-----------|-------------------|
-| RBF-SVM | ~96–97% | ~0.15–0.25 |
-| Random Forest | ~94–96% | ~0.20–0.30 |
-| CNN (PyTorch, FGSM) | ~98–99% | ~0.10–0.20 |
-
-*Exact values will vary. CNN with true FGSM breaks earlier because the attack is stronger.*
+- "Hardening" in the original code means ordinary clean-data training.
+- Random signed noise is not a targeted attack or a gradient-based attack.
+- The plotted collapse line is half the RF baseline (47.855%), not 50%
+  accuracy and not half of each model's own baseline.
+- The visual audit shows the first test image with RF predictions only. It
+  does not search for a successful misclassification or prove imperceptibility.
+- Citation placeholders in the original notebook are unresolved references,
+  not verified citations. They are retained only to preserve the source.
+- Recent scikit-learn versions require an explicit one-vs-rest wrapper for
+  multiclass Logistic Regression with `liblinear`; the runnable script will
+  make that behavior explicit.
